@@ -15,6 +15,16 @@
 #include <rte_lcore.h>
 #include <rte_debug.h>
 
+/* Parameters */
+#define BURST_SIZE	(32)
+
+/* Data structure */
+struct nfv_conf {
+	int function_type;
+	struct rte_ring *ring;
+};
+
+
 static int
 lcore_hello(__attribute__((unused)) void *arg)
 {
@@ -23,6 +33,26 @@ lcore_hello(__attribute__((unused)) void *arg)
 	printf("hello from core %u\n", lcore_id);
 	return 0;
 }
+
+#ifdef READY
+static void nfv_block_function( __attribute__((unused)) void *dummy)
+{
+	unsigned lcore_id = rte_lcore_id();
+	int nb_rx = 0, burst_size=BURST_SIZE;
+	struct rte_mbuf *bufs[burst_size];
+	struct nfv_conf *conf = (struct thread_tx_conf *)dummy;
+
+	printf("hello from core %u\n", lcore_id);
+
+	/*Main loop forever*/
+	for (;;) {
+		nb_rx = rte_ring_dequeue_burst(conf->ring, (void *)bufs, burst_size);
+		if (unlikely(nb_rx == 0))
+			continue;
+	}
+}
+#endif
+
 
 int
 main(int argc, char **argv)
@@ -35,13 +65,11 @@ main(int argc, char **argv)
 		rte_panic("Cannot init EAL\n");
 
 	/* call lcore_hello() on every slave lcore */
-	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-		rte_eal_remote_launch(lcore_hello, NULL, lcore_id);
-	}
-
-	/* call it on master lcore too */
-	lcore_hello(NULL);
+	rte_eal_mp_remote_launch(lcore_hello, NULL, CALL_MASTER);
+	printf("This is main at core %d\n", lcore_id);
+//	nfv_block_function();
 
 	rte_eal_mp_wait_lcore();
 	return 0;
 }
+
