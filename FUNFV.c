@@ -51,8 +51,8 @@ lcore_hello(__attribute__((unused)) void *arg)
 	return 0;
 }
 
+#ifdef IGNORE
 
-#ifdef READY
 static void nfv_block_function( __attribute__((unused)) void *dummy)
 {
 	unsigned lcore_id = rte_lcore_id();
